@@ -1,18 +1,25 @@
 name: Terraform Automation
 
 on:
-  workflow_dispatch:  # This allows manual triggering of the workflow
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform Action'
+        required: true
+        default: 'apply'
+        type: choice
+        options:
+          - apply
+          - destroy
 
 jobs:
   terraform:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the code from the repository
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Set up AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -20,28 +27,21 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-south-1
 
-      # Step 3: Set up Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.0
 
-      # Step 4: Initialize Terraform
       - name: Terraform Init
         run: terraform init
 
-      # Step 5: Create an execution plan with Terraform
       - name: Terraform Plan
         run: terraform plan
 
-      # Step 6: Apply the Terraform plan (create resources)
       - name: Terraform Apply
+        if: ${{ github.event.inputs.action == 'apply' }}
         run: terraform apply -auto-approve
-        # This step will only run when manually triggered via 'workflow_dispatch'
-        if: ${{ github.event_name == 'workflow_dispatch' }}
 
-      # Step 7: Destroy the infrastructure (cleanup)
       - name: Terraform Destroy
+        if: ${{ github.event.inputs.action == 'destroy' }}
         run: terraform destroy -auto-approve
-        # This step will also only run when manually triggered via 'workflow_dispatch'
-        if: ${{ github.event_name == 'workflow_dispatch' }}
